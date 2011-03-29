@@ -1,5 +1,5 @@
 ################################################################################
-### $Id: CMakeLists.txt 6461 2010-05-31 11:46:20Z FloSoft $
+### $Id: CMakeLists.txt 7105 2011-03-29 14:12:38Z FloSoft $
 ################################################################################
 
 IF ("${CROSSCOMPILE}" STREQUAL "1" )
@@ -12,6 +12,9 @@ IF ("${CROSSCOMPILE}" STREQUAL "1" )
 	SET(CMAKE_C_LINK_FLAGS "")
 	SET(CMAKE_CXX_LINK_FLAGS "")
 	SET(CMAKE_EXE_LINKER_FLAGS "-lz")
+
+	SET(CMAKE_C_STANDARD_LIBRARIES "")
+	SET(CMAKE_CXX_STANDARD_LIBRARIES "")
 	
 	SET(CMAKE_EXECUTABLE_SUFFIX "")
 	SET(CMAKE_GNULD_IMAGE_VERSION "")
