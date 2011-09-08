@@ -1,6 +1,6 @@
-// $Id: main.cpp 6581 2010-07-16 11:16:34Z FloSoft $
+// $Id: main.cpp 7521 2011-09-08 20:45:55Z FloSoft $
 //
-// Copyright (c) 2005 - 2010 Settlers Freaks (sf-team at siedler25.org)
+// Copyright (c) 2005 - 2011 Settlers Freaks (sf-team at siedler25.org)
 //
 // This file is part of Return To The Roots.
 //
@@ -27,7 +27,7 @@
 
 #ifdef _WIN32
 #	include <windows.h>
-#	define chdir SetCurrentDirectory
+#	define chdir SetCurrentDirectoryA
 #else
 #	include <unistd.h>
 #endif
@@ -49,7 +49,7 @@ std::string getcwd()
 {
 	char curdir[4096];
 #ifdef _WIN32
-	GetCurrentDirectory(4096, curdir);
+	GetCurrentDirectoryA(4096, curdir);
 #else
 	std::string ignorestupidgccwarning = getcwd(curdir, 4096);
 	ignorestupidgccwarning = "";
