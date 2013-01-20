@@ -1,4 +1,4 @@
-// $Id: main.cpp 7521 2011-09-08 20:45:55Z FloSoft $
+// $Id: main.cpp 8595 2013-01-20 19:34:54Z FloSoft $
 //
 // Copyright (c) 2005 - 2011 Settlers Freaks (sf-team at siedler25.org)
 //
@@ -27,7 +27,7 @@
 
 #ifdef _WIN32
 #	include <windows.h>
-#	define chdir SetCurrentDirectoryA
+#	define chdir !SetCurrentDirectoryA
 #else
 #	include <unistd.h>
 #endif
