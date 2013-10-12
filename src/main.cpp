@@ -1,4 +1,4 @@
-// $Id: main.cpp 8595 2013-01-20 19:34:54Z FloSoft $
+// $Id: main.cpp 8971 2013-10-12 07:58:48Z FloSoft $
 //
 // Copyright (c) 2005 - 2011 Settlers Freaks (sf-team at siedler25.org)
 //
@@ -112,8 +112,15 @@ int main(int argc, char *argv[])
 		getline(svn, t); // entry count
 		getline(svn, t); // empty
 		getline(svn, t); // "dir"
+		getline(svn, t); // "revision"
+		getline(svn, t); // "wc-url"
+		getline(svn, t); // "repo-url"
+		getline(svn, t); // empty
+		getline(svn, t); // empty
+		getline(svn, t); // empty
+		getline(svn, t); // "checkin date"
 
-		svn >> revision;
+		svn >> revision; // "last revision"
 		svn.close();
 	}
 	
