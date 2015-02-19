@@ -244,7 +244,7 @@ int main(int argc, char* argv[])
 		{
 			if(commit != "")
 			{
-				if(v != commit)
+				if(v != commit && v != commit+"\"")
 				{
 					// set new revision
 					ll.clear();
