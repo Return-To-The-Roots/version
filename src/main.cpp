@@ -25,7 +25,7 @@
 #undef _WIN32
 #endif
 
-#include <sys/types.h> 
+#include <sys/types.h>
 #include <sys/stat.h>
 
 #ifdef _WIN32
@@ -51,251 +51,269 @@ using namespace std;
 
 std::string getcwd()
 {
-	char curdir[4096];
+    char curdir[4096];
 #ifdef _WIN32
-	GetCurrentDirectoryA(4096, curdir);
+    GetCurrentDirectoryA(4096, curdir);
 #else
-	std::string ignorestupidgccwarning = getcwd(curdir, 4096);
-	ignorestupidgccwarning = "";
+    std::string ignorestupidgccwarning = getcwd(curdir, 4096);
+    ignorestupidgccwarning = "";
 #endif
 
-	return std::string(curdir) + '/';
+    return std::string(curdir) + '/';
 }
 
 bool isfile(const std::string& file)
 {
-	struct stat s;
-	if( stat(file.c_str(), &s) == 0 )
-		return ((s.st_mode & S_IFREG) == S_IFREG);
+    struct stat s;
+    if( stat(file.c_str(), &s) == 0 )
+        return ((s.st_mode & S_IFREG) == S_IFREG);
 
-	return false;
+    return false;
+}
+
+bool isdir(const std::string& dir)
+{
+    struct stat s;
+    if( stat(dir.c_str(), &s) == 0 )
+        return ((s.st_mode & S_IFDIR) == S_IFDIR);
+
+    return false;
 }
 
 void finish()
 {
-	cerr << "       version: finished" << endl;
+    cerr << "       version: finished" << endl;
 }
 
 int main(int argc, char* argv[])
 {
-	std::string binary_dir = getcwd();
+    std::string binary_dir = getcwd();
 
-	if(argc >= 2)
-	{
-		if(chdir(argv[1]) != 0)
-		{
-			cerr << "chdir to directory \"" << argv[1] << "\" failed!" << endl;
-			return 1;
-		}
-	}
+    if(argc >= 2)
+    {
+        if(chdir(argv[1]) != 0)
+        {
+            cerr << "chdir to directory \"" << argv[1] << "\" failed!" << endl;
+            return 1;
+        }
+    }
 
-	std::string source_dir = getcwd();
-	cerr << "       version: started" << endl;
-	cerr << "                source directory: \"" << source_dir << "\"" << endl;
-	cerr << "                build  directory: \"" << binary_dir << "\"" << endl;
+    std::string source_dir = getcwd();
+    cerr << "       version: started" << endl;
+    cerr << "                source directory: \"" << source_dir << "\"" << endl;
+    cerr << "                build  directory: \"" << binary_dir << "\"" << endl;
 
-	atexit(finish);
+    atexit(finish);
 
-	ifstream bzr( (source_dir + ".bzr/branch/last-revision").c_str() );
-	const int bzr_errno = errno;
+    ifstream bzr( (source_dir + ".bzr/branch/last-revision").c_str() );
+    const int bzr_errno = errno;
 
-	ifstream svn( (source_dir + ".svn/entries").c_str() );
-	const int svn_errno = errno;
+    ifstream svn( (source_dir + ".svn/entries").c_str() );
+    const int svn_errno = errno;
 
-	ifstream githead( (source_dir + ".git/HEAD").c_str() );
-	const int git_errno = errno;
+    string gitpath = source_dir + ".git/";
+    if (!isdir(gitpath))
+        gitpath = source_dir + "../.git/";
 
-	int revision = 0;
-	std::string commit = "";
+    ifstream githead( (gitpath + "HEAD").c_str() );
+    const int git_errno = errno;
 
-	if(!svn && !bzr && !githead)
-	{
-		cerr << "                failed to read any of:" << endl;
-		cerr << "                .svn/entries: " << strerror(svn_errno) << endl;
-		cerr << "                .bzr/branch/last-revision: " << strerror(bzr_errno) << endl;
-		cerr << "                .git/HEAD: " << strerror(git_errno) << endl;
+    int revision = 0;
+    std::string commit = "";
 
-		return 1;
-	}
+    if(!svn && !bzr && !githead)
+    {
+        cerr << "                failed to read any of:" << endl;
+        cerr << "                .svn/entries: " << strerror(svn_errno) << endl;
+        cerr << "                .bzr/branch/last-revision: " << strerror(bzr_errno) << endl;
+        cerr << "                " << gitpath << "HEAD: " << strerror(git_errno) << endl;
 
-	// use git revision if exist
-	if(githead)
-	{
-		std::string ref_text, ref;
-		githead >> ref_text >> ref;
-		githead.close();
+        return 1;
+    }
 
-		if(!isfile( source_dir + ".git/" + ref ))
-		{
-			cerr << "                failed to read .git/HEAD or .git/" << ref << endl;
-			return 1;
-		}
+    // use git revision if exist
+    if(githead)
+    {
+        std::string ref_text, ref;
+        githead >> ref_text >> ref;
+        githead.close();
 
-		ifstream gitref( ( source_dir + ".git/" + ref ).c_str() );
-		if(!gitref)
-		{
-			cerr << "                failed to read:" << endl;
-			cerr << "                .git/" << ref << ": " << strerror(errno) << endl;
-			return 1;
-		}
-		getline(gitref, commit);
-		gitref.close();
-	}
-	else if(bzr) // use bazaar revision if exist
-	{
-		bzr >> revision;
-		bzr.close();
-	}
-	else if(svn) // using subversion revision, if no bazaar one exists
-	{
-		string t;
+        if (ref_text != "ref:")
+            commit = ref_text;
+        else
+        {
+            if(!isfile( gitpath + ref ))
+            {
+                cerr << "                failed to read " << gitpath << "HEAD or " << gitpath << ref << endl;
+                return 1;
+            }
 
-		getline(svn, t); // entry count
-		getline(svn, t); // empty
-		getline(svn, t); // "dir"
-		getline(svn, t); // "revision"
-		getline(svn, t); // "wc-url"
-		getline(svn, t); // "repo-url"
-		getline(svn, t); // empty
-		getline(svn, t); // empty
-		getline(svn, t); // empty
-		getline(svn, t); // "checkin date"
+            ifstream gitref( ( gitpath + ref ).c_str() );
+            if(!gitref)
+            {
+                cerr << "                failed to read:" << endl;
+                cerr << "                " << gitpath << ref << ": " << strerror(errno) << endl;
+                return 1;
+            }
+            getline(gitref, commit);
+            gitref.close();
+        }
+    }
+    else if(bzr) // use bazaar revision if exist
+    {
+        bzr >> revision;
+        bzr.close();
+    }
+    else if(svn) // using subversion revision, if no bazaar one exists
+    {
+        string t;
 
-		svn >> revision; // "last revision"
-		svn.close();
-	}
+        getline(svn, t); // entry count
+        getline(svn, t); // empty
+        getline(svn, t); // "dir"
+        getline(svn, t); // "revision"
+        getline(svn, t); // "wc-url"
+        getline(svn, t); // "repo-url"
+        getline(svn, t); // empty
+        getline(svn, t); // empty
+        getline(svn, t); // empty
+        getline(svn, t); // "checkin date"
 
-	ifstream versionhforce( (binary_dir + "build_version.h.force").c_str() );
-	if(versionhforce)
-	{
-		cerr << "                the file \"build_version.h.force\" does exist." << endl;
-		cerr << "                i will not change \"build_version.h\"." << endl;
-		versionhforce.close();
-		return 0;
-	}
+        svn >> revision; // "last revision"
+        svn.close();
+    }
 
-	ifstream versionh( (binary_dir + "build_version.h").c_str() );
-	const int versionh_errno = errno;
+    ifstream versionhforce( (binary_dir + "build_version.h.force").c_str() );
+    if(versionhforce)
+    {
+        cerr << "                the file \"build_version.h.force\" does exist." << endl;
+        cerr << "                i will not change \"build_version.h\"." << endl;
+        versionhforce.close();
+        return 0;
+    }
 
-	if(!versionh)
-	{
-		versionh.clear();
-		versionh.open( (source_dir + "build_version.h.in").c_str() );
-	}
+    ifstream versionh( (binary_dir + "build_version.h").c_str() );
+    const int versionh_errno = errno;
 
-	if(!versionh)
-	{
-		cerr << "                failed to read any of:" << endl;
-		cerr << "                build_version.h:    " << strerror(versionh_errno) << endl;
-		cerr << "                build_version.h.in: " << strerror(errno) << endl;
+    if(!versionh)
+    {
+        versionh.clear();
+        versionh.open( (source_dir + "build_version.h.in").c_str() );
+    }
 
-		return 1;
-	}
+    if(!versionh)
+    {
+        cerr << "                failed to read any of:" << endl;
+        cerr << "                build_version.h:    " << strerror(versionh_errno) << endl;
+        cerr << "                build_version.h.in: " << strerror(errno) << endl;
 
-	vector<string> newversionh;
+        return 1;
+    }
 
-	string l;
-	bool changed = false;
-	while(getline(versionh, l))
-	{
-		stringstream ll(l);
-		string d, n;
-		char q;
-		string v;
+    vector<string> newversionh;
 
-		ll >> d; // define
-		ll >> n; // name
-		ll >> q; // "
-		ll >> v; // value
-		ll >> q; // "
+    string l;
+    bool changed = false;
+    while(getline(versionh, l))
+    {
+        stringstream ll(l);
+        string d, n;
+        char q;
+        string v;
 
-		stringstream vv(v);
+        ll >> d; // define
+        ll >> n; // name
+        ll >> q; // "
+        ll >> v; // value
+        ll >> q; // "
 
-		int vi = 0;
-		vv >> vi;
+        stringstream vv(v);
 
-		if(n == "FORCE")
-		{
-			cerr << "                the define \"FORCE\" does exist in the file \"build_version.h\"" << endl;
-			cerr << "                i will not change \"build_version.h\"" << endl;
-		}
+        int vi = 0;
+        vv >> vi;
 
-		if(n == "WINDOW_VERSION")
-		{
-			time_t t;
-			time(&t);
+        if(n == "FORCE")
+        {
+            cerr << "                the define \"FORCE\" does exist in the file \"build_version.h\"" << endl;
+            cerr << "                i will not change \"build_version.h\"" << endl;
+        }
 
-			char tv[64];
-			strftime(tv, 63, "%Y%m%d", localtime(&t) );
-			if(vi >= 20000101 && vi < atoi(tv))
-			{
-				// set new day
-				ll.clear();
-				ll.str("");
-				ll << d << " " << n << " \"" << tv << "\"";
-				l = ll.str();
+        if(n == "WINDOW_VERSION")
+        {
+            time_t t;
+            time(&t);
 
-				cout << "                renewing version to day \"" << tv << "\"" << endl;
-				changed = true;
-			}
-		}
+            char tv[64];
+            strftime(tv, 63, "%Y%m%d", localtime(&t) );
+            if(vi >= 20000101 && vi < atoi(tv))
+            {
+                // set new day
+                ll.clear();
+                ll.str("");
+                ll << d << " " << n << " \"" << tv << "\"";
+                l = ll.str();
 
-		if(n == "WINDOW_REVISION")
-		{
-			if(commit != "")
-			{
-				if(v != commit && v != commit+"\"")
-				{
-					// set new revision
-					ll.clear();
-					ll.str("");
-					ll << d << " " << n << " \"" << commit << "\"";
-					l = ll.str();
+                cout << "                renewing version to day \"" << tv << "\"" << endl;
+                changed = true;
+            }
+        }
 
-					cout << "                renewing commit to \"" << commit << "\"" << endl;
-					changed = true;
-				}
-			}
-			else
-			{
-				if(vi < revision)
-				{
-					// set new revision
-					ll.clear();
-					ll.str("");
-					ll << d << " " << n << " \"" << revision << "\"";
-					l = ll.str();
+        if(n == "WINDOW_REVISION")
+        {
+            if(commit != "")
+            {
+                if(v != commit && v != commit+"\"")
+                {
+                    // set new revision
+                    ll.clear();
+                    ll.str("");
+                    ll << d << " " << n << " \"" << commit << "\"";
+                    l = ll.str();
 
-					cout << "                renewing version to revision \"" << revision << "\"" << endl;
-					changed = true;
-				}
-			}
-		}
+                    cout << "                renewing commit to \"" << commit << "\"" << endl;
+                    changed = true;
+                }
+            }
+            else
+            {
+                if(vi < revision)
+                {
+                    // set new revision
+                    ll.clear();
+                    ll.str("");
+                    ll << d << " " << n << " \"" << revision << "\"";
+                    l = ll.str();
 
-		newversionh.push_back(l);
-	}
-	versionh.close();
+                    cout << "                renewing version to revision \"" << revision << "\"" << endl;
+                    changed = true;
+                }
+            }
+        }
 
-	if(changed) // only write if changed
-	{
-		std::cerr << "                build_version.h has changed" << std::endl;
+        newversionh.push_back(l);
+    }
+    versionh.close();
 
-		ofstream versionh( (binary_dir + "build_version.h").c_str() );
-		const int versionh_errno = errno;
+    if(changed) // only write if changed
+    {
+        std::cerr << "                build_version.h has changed" << std::endl;
 
-		if(!versionh)
-		{
-			cerr << "failed to write to build_version.h: " << strerror(versionh_errno) << endl;
-			return 1;
-		}
+        ofstream versionh( (binary_dir + "build_version.h").c_str() );
+        const int versionh_errno = errno;
 
-		for(vector<string>::const_iterator l = newversionh.begin(); l != newversionh.end(); ++l)
-			versionh << *l << endl;
+        if(!versionh)
+        {
+            cerr << "failed to write to build_version.h: " << strerror(versionh_errno) << endl;
+            return 1;
+        }
 
-		versionh.close();
-	}
-	else
-		std::cerr << "                build_version.h is unchanged" << std::endl;
+        for(vector<string>::const_iterator l = newversionh.begin(); l != newversionh.end(); ++l)
+            versionh << *l << endl;
 
-	return 0;
+        versionh.close();
+    }
+    else
+        std::cerr << "                build_version.h is unchanged" << std::endl;
+
+    return 0;
 }
