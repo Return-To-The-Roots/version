@@ -111,11 +111,13 @@ int main(int argc, char* argv[])
     ifstream svn( (source_dir + ".svn/entries").c_str() );
     const int svn_errno = errno;
 
-    string gitpath = source_dir + ".git/";
-    if (!isdir(gitpath))
+    string gitpath = source_dir + ".git";
+    if (isdir(gitpath))
+		gitpath += "/";
+	else
         gitpath = source_dir + "../.git/";
 
-    ifstream githead( (gitpath + "HEAD").c_str() );
+    ifstream githead( (gitpath + "/HEAD").c_str() );
     const int git_errno = errno;
 
     int revision = 0;
