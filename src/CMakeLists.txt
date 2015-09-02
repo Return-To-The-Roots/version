@@ -1,6 +1,3 @@
-################################################################################
-### $Id: CMakeLists.txt 7116 2011-04-02 14:16:59Z FloSoft $
-################################################################################
 
 IF ("${CROSSCOMPILE}" STREQUAL "1" )
 	MESSAGE(STATUS "version: Reverting to host compiler to avoid \"cannot execute binary file\"")
