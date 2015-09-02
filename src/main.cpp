@@ -236,6 +236,7 @@ int main(int argc, char* argv[])
         {
             cerr << "                the define \"FORCE\" does exist in the file \"build_version.h\"" << endl;
             cerr << "                i will not change \"build_version.h\"" << endl;
+            return 0;
         }
 
         if(n == "WINDOW_VERSION")
