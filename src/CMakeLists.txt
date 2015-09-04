@@ -1,5 +1,5 @@
 
-IF (${CMAKE_CROSSCOMPILING})
+IF (CMAKE_CROSSCOMPILING)
 	MESSAGE(STATUS "version: Reverting to host compiler to avoid \"cannot execute binary file\"")
 
 	SET(CMAKE_C_COMPILER "cc")
@@ -18,7 +18,7 @@ IF (${CMAKE_CROSSCOMPILING})
 
 	SET(CMAKE_CXX_COMPILE_OBJECT  "<CMAKE_CXX_COMPILER> ${CMAKE_CXX_FLAGS} -o <OBJECT> -c <SOURCE>")
 	SET(CMAKE_CXX_LINK_EXECUTABLE "<CMAKE_CXX_COMPILER> <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
-ENDIF (${CMAKE_CROSSCOMPILING})
+ENDIF (CMAKE_CROSSCOMPILING)
 
 ################################################################################
 
