@@ -85,6 +85,8 @@ void finish()
 
 int main(int argc, char* argv[])
 {
+    const std::string versionFileName = "build_version_defines.h";
+
     std::string binary_dir = getcwd();
 
     if(argc >= 2)
@@ -183,29 +185,29 @@ int main(int argc, char* argv[])
         svn.close();
     }
 
-    ifstream versionhforce( (binary_dir + "build_version.h.force").c_str() );
+    ifstream versionhforce( (binary_dir + versionFileName + ".force").c_str() );
     if(versionhforce)
     {
-        cerr << "                the file \"build_version.h.force\" does exist." << endl;
-        cerr << "                i will not change \"build_version.h\"." << endl;
+        cerr << "                the file \"" + versionFileName + ".force\" does exist." << endl;
+        cerr << "                i will not change \"" + versionFileName + "\"." << endl;
         versionhforce.close();
         return 0;
     }
 
-    ifstream versionh( (binary_dir + "build_version.h").c_str() );
+    ifstream versionh( (binary_dir + versionFileName).c_str() );
     const int versionh_errno = errno;
 
     if(!versionh)
     {
         versionh.clear();
-        versionh.open( (source_dir + "build_version.h.in").c_str() );
+        versionh.open( (source_dir + versionFileName + ".in").c_str() );
     }
 
     if(!versionh)
     {
         cerr << "                failed to read any of:" << endl;
-        cerr << "                build_version.h:    " << strerror(versionh_errno) << endl;
-        cerr << "                build_version.h.in: " << strerror(errno) << endl;
+        cerr << "                " + versionFileName + ":    " << strerror(versionh_errno) << endl;
+        cerr << "                " + versionFileName + ".in: " << strerror(errno) << endl;
 
         return 1;
     }
@@ -234,8 +236,8 @@ int main(int argc, char* argv[])
 
         if(n == "FORCE")
         {
-            cerr << "                the define \"FORCE\" does exist in the file \"build_version.h\"" << endl;
-            cerr << "                i will not change \"build_version.h\"" << endl;
+            cerr << "                the define \"FORCE\" does exist in the file \"" + versionFileName + "\"" << endl;
+            cerr << "                i will not change \"" + versionFileName + "\"" << endl;
             return 0;
         }
 
@@ -297,14 +299,14 @@ int main(int argc, char* argv[])
 
     if(changed) // only write if changed
     {
-        std::cerr << "                build_version.h has changed" << std::endl;
+        std::cerr << "                " + versionFileName + " has changed" << std::endl;
 
-        ofstream versionh( (binary_dir + "build_version.h").c_str() );
+        ofstream versionh( (binary_dir + versionFileName).c_str() );
         const int versionh_errno = errno;
 
         if(!versionh)
         {
-            cerr << "failed to write to build_version.h: " << strerror(versionh_errno) << endl;
+            cerr << "failed to write to " + versionFileName + ": " << strerror(versionh_errno) << endl;
             return 1;
         }
 
@@ -314,7 +316,7 @@ int main(int argc, char* argv[])
         versionh.close();
     }
     else
-        std::cerr << "                build_version.h is unchanged" << std::endl;
+        std::cerr << "                " + versionFileName + " is unchanged" << std::endl;
 
     return 0;
 }
