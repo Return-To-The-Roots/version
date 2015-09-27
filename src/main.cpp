@@ -214,64 +214,60 @@ int main(int argc, char* argv[])
 
     vector<string> newversionh;
 
-    string l;
+    string line;
     bool changed = false;
-    while(getline(versionh, l))
+    while(getline(versionh, line))
     {
-        stringstream ll(l);
-        string d, n;
-        char q;
-        string v;
+        stringstream sLine(line);
+        string sDefine, defineName;
+        char tmpQuote;
+        string defineValue;
 
-        ll >> d; // define
-        ll >> n; // name
-        ll >> q; // "
-        ll >> v; // value
-        ll >> q; // "
+        sLine >> sDefine >> defineName >> tmpQuote >> defineValue >> tmpQuote; // define name "value"
 
-        stringstream vv(v);
+        stringstream vv(defineValue);
 
-        int vi = 0;
-        vv >> vi;
+        int defineValInt = 0;
+        vv >> defineValInt;
 
-        if(n == "FORCE")
+        if(defineName == "FORCE")
         {
             cerr << "                the define \"FORCE\" does exist in the file \"" + versionFileName + "\"" << endl;
-            cerr << "                i will not change \"" + versionFileName + "\"" << endl;
+            cerr << "                I will not change \"" + versionFileName + "\"" << endl;
             return 0;
         }
 
-        if(n == "WINDOW_VERSION")
+        if(defineName == "WINDOW_VERSION")
         {
             time_t t;
             time(&t);
 
             char tv[64];
             strftime(tv, 63, "%Y%m%d", localtime(&t) );
-            if(vi >= 20000101 && vi < atoi(tv))
+            if(defineValInt >= 20000101 && defineValInt < atoi(tv))
             {
                 // set new day
-                ll.clear();
-                ll.str("");
-                ll << d << " " << n << " \"" << tv << "\"";
-                l = ll.str();
+                sLine.clear();
+                sLine.str("");
+                sLine << sDefine << " " << defineName << " \"" << tv << "\"";
+                line = sLine.str();
 
                 cout << "                renewing version to day \"" << tv << "\"" << endl;
                 changed = true;
             }
         }
 
-        if(n == "WINDOW_REVISION")
+        if(defineName == "WINDOW_REVISION")
         {
             if(commit != "")
             {
-                if(v != commit && v != commit+"\"")
+                if(defineValue != commit && defineValue != commit+"\"")
                 {
                     // set new revision
-                    ll.clear();
-                    ll.str("");
-                    ll << d << " " << n << " \"" << commit << "\"";
-                    l = ll.str();
+                    sLine.clear();
+                    sLine.str("");
+                    sLine << sDefine << " " << defineName << " \"" << commit << "\"";
+                    line = sLine.str();
 
                     cout << "                renewing commit to \"" << commit << "\"" << endl;
                     changed = true;
@@ -279,13 +275,13 @@ int main(int argc, char* argv[])
             }
             else
             {
-                if(vi < revision)
+                if(defineValInt < revision)
                 {
                     // set new revision
-                    ll.clear();
-                    ll.str("");
-                    ll << d << " " << n << " \"" << revision << "\"";
-                    l = ll.str();
+                    sLine.clear();
+                    sLine.str("");
+                    sLine << sDefine << " " << defineName << " \"" << revision << "\"";
+                    line = sLine.str();
 
                     cout << "                renewing version to revision \"" << revision << "\"" << endl;
                     changed = true;
@@ -293,7 +289,7 @@ int main(int argc, char* argv[])
             }
         }
 
-        newversionh.push_back(l);
+        newversionh.push_back(line);
     }
     versionh.close();
 
@@ -310,8 +306,8 @@ int main(int argc, char* argv[])
             return 1;
         }
 
-        for(vector<string>::const_iterator l = newversionh.begin(); l != newversionh.end(); ++l)
-            versionh << *l << endl;
+        for(vector<string>::const_iterator itLine = newversionh.begin(); itLine != newversionh.end(); ++itLine)
+            versionh << *itLine << endl;
 
         versionh.close();
     }
