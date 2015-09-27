@@ -259,7 +259,7 @@ int main(int argc, char* argv[])
 
         if(defineName == "WINDOW_REVISION")
         {
-            if(commit != "")
+            if(commit.empty())
             {
                 if(defineValue != commit && defineValue != commit+"\"")
                 {
