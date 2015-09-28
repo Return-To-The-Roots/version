@@ -200,7 +200,7 @@ int main(int argc, char* argv[])
     if(!versionh)
     {
         versionh.clear();
-        versionh.open( (source_dir + versionFileName + ".in").c_str() );
+        versionh.open( (source_dir + versionFileName + ".cmake").c_str() );
     }
 
     if(!versionh)
@@ -259,7 +259,7 @@ int main(int argc, char* argv[])
 
         if(defineName == "WINDOW_REVISION")
         {
-            if(commit.empty())
+            if(!commit.empty())
             {
                 if(defineValue != commit && defineValue != commit+"\"")
                 {
