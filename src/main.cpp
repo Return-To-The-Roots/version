@@ -223,68 +223,69 @@ int main(int argc, char* argv[])
         char tmpQuote;
         string defineValue;
 
-        sLine >> sDefine >> defineName >> tmpQuote >> defineValue >> tmpQuote; // define name "value"
-
-        stringstream vv(defineValue);
-
-        int defineValInt = 0;
-        vv >> defineValInt;
-
-        if(defineName == "FORCE")
+        sLine >> sDefine;
+        
+        if(sDefine == "#define")
         {
-            cerr << "                the define \"FORCE\" does exist in the file \"" + versionFileName + "\"" << endl;
-            cerr << "                I will not change \"" + versionFileName + "\"" << endl;
-            return 0;
-        }
+            sLine >> defineName >> tmpQuote >> defineValue >> tmpQuote; // define name "value"
 
-        if(defineName == "WINDOW_VERSION")
-        {
-            time_t t;
-            time(&t);
+            stringstream vv(defineValue);
 
-            char tv[64];
-            strftime(tv, 63, "%Y%m%d", localtime(&t) );
-            if(defineValInt >= 20000101 && defineValInt < atoi(tv))
+            int defineValInt = 0;
+            vv >> defineValInt;
+
+            if(defineName == "FORCE")
             {
-                // set new day
-                sLine.clear();
-                sLine.str("");
-                sLine << sDefine << " " << defineName << " \"" << tv << "\"";
-                line = sLine.str();
-
-                cout << "                renewing version to day \"" << tv << "\"" << endl;
-                changed = true;
-            }
-        }
-
-        if(defineName == "WINDOW_REVISION")
-        {
-            if(!commit.empty())
+                cerr << "                the define \"FORCE\" does exist in the file \"" + versionFileName + "\"" << endl;
+                cerr << "                I will not change \"" + versionFileName + "\"" << endl;
+                return 0;
+            }else if(defineName == "WINDOW_VERSION")
             {
-                if(defineValue != commit && defineValue != commit+"\"")
+                time_t t;
+                time(&t);
+
+                char tv[64];
+                strftime(tv, 63, "%Y%m%d", localtime(&t) );
+                if(defineValInt >= 20000101 && defineValInt < atoi(tv))
                 {
-                    // set new revision
+                    // set new day
                     sLine.clear();
                     sLine.str("");
-                    sLine << sDefine << " " << defineName << " \"" << commit << "\"";
+                    sLine << sDefine << " " << defineName << " \"" << tv << "\"";
                     line = sLine.str();
 
-                    cout << "                renewing commit to \"" << commit << "\"" << endl;
+                    cout << "                renewing version to day \"" << tv << "\"" << endl;
                     changed = true;
                 }
-            }
-            else
+            }else if(defineName == "WINDOW_REVISION")
             {
-                if(defineValInt < revision)
+                if(!commit.empty())
                 {
-                    // set new revision
-                    sLine.clear();
-                    sLine.str("");
-                    sLine << sDefine << " " << defineName << " \"" << revision << "\"";
-                    line = sLine.str();
+                    if(defineValue != commit && defineValue != commit+"\"")
+                    {
+                        // set new revision
+                        sLine.clear();
+                        sLine.str("");
+                        sLine << sDefine << " " << defineName << " \"" << commit << "\"";
+                        line = sLine.str();
 
-                    cout << "                renewing version to revision \"" << revision << "\"" << endl;
-                    changed = true;
+                        cout << "                renewing commit to \"" << commit << "\"" << endl;
+                        changed = true;
+                    }
+                }
+                else
+                {
+                    if(defineValInt < revision)
+                    {
+                        // set new revision
+                        sLine.clear();
+                        sLine.str("");
+                        sLine << sDefine << " " << defineName << " \"" << revision << "\"";
+                        line = sLine.str();
+
+                        cout << "                renewing version to revision \"" << revision << "\"" << endl;
+                        changed = true;
+                    }
                 }
             }
         }
