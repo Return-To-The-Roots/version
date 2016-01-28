@@ -47,7 +47,7 @@
 
 using namespace std;
 
-std::string getcwd()
+std::string getCurrendWorkDir()
 {
     char curdir[4096];
 #ifdef _WIN32
@@ -87,7 +87,7 @@ int main(int argc, char* argv[])
 {
     const std::string versionFileName = "build_version_defines.h";
 
-    std::string binary_dir = getcwd();
+    std::string binary_dir = getCurrendWorkDir();
 
     if(argc >= 2)
     {
@@ -98,7 +98,7 @@ int main(int argc, char* argv[])
         }
     }
 
-    std::string source_dir = getcwd();
+    std::string source_dir = getCurrendWorkDir();
     cerr << "       version: started" << endl;
     cerr << "                source directory: \"" << source_dir << "\"" << endl;
     cerr << "                build  directory: \"" << binary_dir << "\"" << endl;
