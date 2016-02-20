@@ -23,11 +23,11 @@
 #undef _WIN32
 #endif
 
-#include <sys/types.h>
 #include <sys/stat.h>
 
 #ifdef _WIN32
 #   include <windows.h>
+
 #   define chdir !SetCurrentDirectoryA
 #	define stat _stat
 #else
@@ -38,9 +38,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
-
-#include <iostream>
 #include <fstream>
+#include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
