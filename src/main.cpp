@@ -82,6 +82,32 @@ void finish()
     cerr << "       version: finished" << endl;
 }
 
+std::string GetCommitFromPackedGitRefs(const std::string& ref, const std::string& gitPath)
+{
+    std::string packedRefsPath = gitPath + "/packed-refs";
+    if(!isfile(packedRefsPath))
+    {
+        cerr << "                failed to find " << packedRefsPath << endl;
+        return "";
+    }
+    ifstream refsFile(packedRefsPath.c_str());
+    std::string commit, commitRef;
+    while(refsFile >> commit)
+    {
+        // Skip comment
+        if(!commit.empty() && commit[0] == '#')
+        {
+            getline(refsFile, commit);
+            continue;
+        }
+        if(!(refsFile >> commitRef))
+            break;
+        if(commitRef == ref)
+            return commit;
+    }
+    return "";
+}
+
 int main(int argc, char* argv[])
 {
     const std::string versionFileName = "build_version_defines.h";
@@ -145,19 +171,28 @@ int main(int argc, char* argv[])
         {
             if(!isfile( gitpath + ref ))
             {
-                cerr << "                failed to read " << gitpath << "HEAD or " << gitpath << ref << endl;
-                return 1;
-            }
-
-            ifstream gitref( ( gitpath + ref ).c_str() );
-            if(!gitref)
+                if(ref.substr(0, 5) != "refs/")
+                {
+                    cerr << "                failed to read " << gitpath << "HEAD. Content: " << ref << endl;
+                    return 1;
+                }
+                commit = GetCommitFromPackedGitRefs(ref, gitpath);
+                if(commit.empty())
+                {
+                    cerr << "                failed to find ref: " << ref << endl;
+                    return 1;
+                }
+            }else
             {
-                cerr << "                failed to read:" << endl;
-                cerr << "                " << gitpath << ref << ": " << strerror(errno) << endl;
-                return 1;
+                ifstream gitref((gitpath + ref).c_str());
+                if(!gitref)
+                {
+                    cerr << "                failed to read:" << endl;
+                    cerr << "                " << gitpath << ref << ": " << strerror(errno) << endl;
+                    return 1;
+                }
+                getline(gitref, commit);
             }
-            getline(gitref, commit);
-            gitref.close();
         }
     }
     else if(bzr) // use bazaar revision if exist
