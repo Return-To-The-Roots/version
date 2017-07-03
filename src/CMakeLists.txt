@@ -18,7 +18,7 @@ ENDIF (CMAKE_CROSSCOMPILING)
 
 ################################################################################
 
-SET(version_SRCS main.cpp)
+SET(version_SRCS versionMain.cpp)
 
 ADD_EXECUTABLE(version ${version_SRCS})
 
