@@ -129,6 +129,15 @@ int main(int argc, char* argv[])
     cerr << "                build  directory: \"" << binary_dir << "\"" << endl;
 
     atexit(finish);
+	
+    ifstream versionhforce( (binary_dir + versionFileName + ".force").c_str() );
+    if(versionhforce)
+    {
+        cerr << "                the file \"" + versionFileName + ".force\" does exist." << endl;
+        cerr << "                i will not change \"" + versionFileName + "\"." << endl;
+        versionhforce.close();
+        return 0;
+    }
 
     ifstream bzr( (source_dir + ".bzr/branch/last-revision").c_str() );
     const int bzr_errno = errno;
@@ -217,15 +226,6 @@ int main(int argc, char* argv[])
 
         svn >> revision; // "last revision"
         svn.close();
-    }
-
-    ifstream versionhforce( (binary_dir + versionFileName + ".force").c_str() );
-    if(versionhforce)
-    {
-        cerr << "                the file \"" + versionFileName + ".force\" does exist." << endl;
-        cerr << "                i will not change \"" + versionFileName + "\"." << endl;
-        versionhforce.close();
-        return 0;
     }
 
     ifstream versionh( (binary_dir + versionFileName).c_str() );
