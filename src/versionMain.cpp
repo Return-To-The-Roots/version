@@ -16,26 +16,13 @@
 // along with Return To The Roots. If not, see <http://www.gnu.org/licenses/>.
 
 #ifdef HAVE_CONFIG_H
-#   include "../config.h"
+#include "../config.h"
 #endif // HAVE_CONFIG_H
 
-#ifdef __linux__
-#undef _WIN32
-#endif
-
-#include <sys/stat.h>
-
-#ifdef _WIN32
-#   include <windows.h>
-
-#   define chdir !SetCurrentDirectoryA
-#	define stat _stat
-#else
-#   include <unistd.h>
-#endif
-
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
+#include <boost/lexical_cast.hpp>
 #include <cerrno>
-#include <cstdlib>
 #include <cstring>
 #include <ctime>
 #include <fstream>
@@ -44,53 +31,22 @@
 #include <string>
 #include <vector>
 
-using namespace std;
-
-std::string getCurrendWorkDir()
-{
-    char curdir[4096];
-#ifdef _WIN32
-    GetCurrentDirectoryA(4096, curdir);
-#else
-    std::string ignorestupidgccwarning = getcwd(curdir, 4096);
-    ignorestupidgccwarning = "";
-#endif
-
-    return std::string(curdir) + '/';
-}
-
-bool isfile(const std::string& file)
-{
-    struct stat s;
-    if( stat(file.c_str(), &s) == 0 )
-        return ((s.st_mode & S_IFREG) == S_IFREG);
-
-    return false;
-}
-
-bool isdir(const std::string& dir)
-{
-    struct stat s;
-    if( stat(dir.c_str(), &s) == 0 )
-        return ((s.st_mode & S_IFDIR) == S_IFDIR);
-
-    return false;
-}
+namespace bfs = boost::filesystem;
 
 void finish()
 {
-    cerr << "       version: finished" << endl;
+    std::cerr << "       version: finished" << std::endl;
 }
 
-std::string GetCommitFromPackedGitRefs(const std::string& ref, const std::string& gitPath)
+std::string GetCommitFromPackedGitRefs(const std::string& ref, const bfs::path& gitPath)
 {
-    std::string packedRefsPath = gitPath + "/packed-refs";
-    if(!isfile(packedRefsPath))
+    bfs::path packedRefsPath = gitPath / "packed-refs";
+    if(!bfs::is_regular_file(packedRefsPath))
     {
-        cerr << "                failed to find " << packedRefsPath << endl;
+        std::cerr << "                failed to find " << packedRefsPath << std::endl;
         return "";
     }
-    ifstream refsFile(packedRefsPath.c_str());
+    bfs::ifstream refsFile(packedRefsPath);
     std::string commit, commitRef;
     while(refsFile >> commit)
     {
@@ -108,63 +64,24 @@ std::string GetCommitFromPackedGitRefs(const std::string& ref, const std::string
     return "";
 }
 
-int main(int argc, char* argv[])
+bool getRevisionOrCommit(const bfs::path& source_dir, unsigned& revision, std::string& commit)
 {
-    const std::string versionFileName = "build_version_defines.h";
+    bfs::path bzrPath = source_dir / ".bzr/branch/last-revision";
+    bfs::path svnPath = source_dir / ".svn/entries";
+    bfs::path gitPath = source_dir / ".git";
+    if(!bfs::is_directory(gitPath))
+        gitPath = source_dir / "../.git";
 
-    std::string binary_dir = getCurrendWorkDir();
-
-    if(argc >= 2)
-    {
-        if(chdir(argv[1]) != 0)
-        {
-            cerr << "chdir to directory \"" << argv[1] << "\" failed!" << endl;
-            return 1;
-        }
-    }
-
-    std::string source_dir = getCurrendWorkDir();
-    cerr << "       version: started" << endl;
-    cerr << "                source directory: \"" << source_dir << "\"" << endl;
-    cerr << "                build  directory: \"" << binary_dir << "\"" << endl;
-
-    atexit(finish);
-	
-    ifstream versionhforce( (binary_dir + versionFileName + ".force").c_str() );
-    if(versionhforce)
-    {
-        cerr << "                the file \"" + versionFileName + ".force\" does exist." << endl;
-        cerr << "                i will not change \"" + versionFileName + "\"." << endl;
-        versionhforce.close();
-        return 0;
-    }
-
-    ifstream bzr( (source_dir + ".bzr/branch/last-revision").c_str() );
-    const int bzr_errno = errno;
-
-    ifstream svn( (source_dir + ".svn/entries").c_str() );
-    const int svn_errno = errno;
-
-    string gitpath = source_dir + ".git";
-    if (isdir(gitpath))
-		gitpath += "/";
-	else
-        gitpath = source_dir + "../.git/";
-
-    ifstream githead( (gitpath + "/HEAD").c_str() );
-    const int git_errno = errno;
-
-    int revision = 0;
-    std::string commit = "";
+    bfs::ifstream bzr(bzrPath), svn(svnPath), githead(gitPath / "HEAD");
 
     if(!svn && !bzr && !githead)
     {
-        cerr << "                failed to read any of:" << endl;
-        cerr << "                .svn/entries: " << strerror(svn_errno) << endl;
-        cerr << "                .bzr/branch/last-revision: " << strerror(bzr_errno) << endl;
-        cerr << "                " << gitpath << "HEAD: " << strerror(git_errno) << endl;
+        std::cerr << "                failed to read any of:" << std::endl
+                  << "                " << svnPath << std::endl
+                  << "                " << bzrPath << std::endl
+                  << "                " << (gitPath / "HEAD") << std::endl;
 
-        return 1;
+        return false;
     }
 
     // use git revision if exist
@@ -172,46 +89,48 @@ int main(int argc, char* argv[])
     {
         std::string ref_text, ref;
         githead >> ref_text >> ref;
-        githead.close();
 
-        if (ref_text != "ref:")
+        if(ref_text != "ref:")
             commit = ref_text;
-        else
+        else if(!bfs::is_regular_file(gitPath / ref))
         {
-            if(!isfile( gitpath + ref ))
+            if(ref.substr(0, 5) != "refs/")
             {
-                if(ref.substr(0, 5) != "refs/")
-                {
-                    cerr << "                failed to read " << gitpath << "HEAD. Content: " << ref << endl;
-                    return 1;
-                }
-                commit = GetCommitFromPackedGitRefs(ref, gitpath);
-                if(commit.empty())
-                {
-                    cerr << "                failed to find ref: " << ref << endl;
-                    return 1;
-                }
-            }else
-            {
-                ifstream gitref((gitpath + ref).c_str());
-                if(!gitref)
-                {
-                    cerr << "                failed to read:" << endl;
-                    cerr << "                " << gitpath << ref << ": " << strerror(errno) << endl;
-                    return 1;
-                }
-                getline(gitref, commit);
+                std::cerr << "                failed to read " << gitPath << ". Content: " << ref << std::endl;
+                return false;
             }
+            commit = GetCommitFromPackedGitRefs(ref, gitPath);
+            if(commit.empty())
+            {
+                std::cerr << "                failed to find ref: " << ref << std::endl;
+                return false;
+            }
+        } else
+        {
+            bfs::ifstream gitref(gitPath / ref);
+            if(!gitref)
+            {
+                std::cerr << "                failed to read:" << std::endl;
+                std::cerr << "                " << (gitPath / ref) << ": " << strerror(errno) << std::endl;
+                return false;
+            }
+            std::getline(gitref, commit);
         }
-    }
-    else if(bzr) // use bazaar revision if exist
+        if(commit.empty())
+        {
+            std::cerr << "                failed to find git commit: " << std::endl;
+            return false;
+        }
+    } else if(bzr) // use bazaar revision if exist
     {
-        bzr >> revision;
-        bzr.close();
-    }
-    else if(svn) // using subversion revision, if no bazaar one exists
+        if(!(bzr >> revision))
+        {
+            std::cerr << "                failed to find bzr revision: " << std::endl;
+            return false;
+        }
+    } else if(svn) // using subversion revision, if no bazaar one exists
     {
-        string t;
+        std::string t;
 
         getline(svn, t); // entry count
         getline(svn, t); // empty
@@ -224,100 +143,150 @@ int main(int argc, char* argv[])
         getline(svn, t); // empty
         getline(svn, t); // "checkin date"
 
-        svn >> revision; // "last revision"
-        svn.close();
+        // "last revision"
+        if(!(svn >> revision))
+        {
+            std::cerr << "                failed to find svn revision: " << std::endl;
+            return false;
+        }
+    }
+    return true;
+}
+
+int main(int argc, char* argv[])
+{
+    const std::string versionFileName = "build_version_defines.h";
+    const std::string versionFileNameForce = versionFileName + ".force";
+    const std::string versionFileNameCMake = versionFileName + ".cmake";
+
+    bfs::path binary_dir = bfs::current_path();
+
+    if(argc >= 2)
+    {
+        boost::system::error_code ec;
+        bfs::current_path(argv[1], ec);
+        if(ec)
+        {
+            std::cerr << "chdir to directory \"" << argv[1] << "\" failed!" << std::endl << "Msg: " << ec << std::endl;
+            return 1;
+        }
     }
 
-    ifstream versionh( (binary_dir + versionFileName).c_str() );
+    bfs::path source_dir = bfs::current_path();
+    std::cerr << "       version: started" << std::endl;
+    std::cerr << "                source directory: " << source_dir << std::endl;
+    std::cerr << "                build  directory: " << binary_dir << std::endl;
+
+    atexit(finish);
+
+    if(bfs::exists(binary_dir / versionFileNameForce))
+    {
+        std::cerr << "                the file \"" + versionFileNameForce + "\" does exist." << std::endl;
+        std::cerr << "                I will not change \"" + versionFileName + "\"." << std::endl;
+        return 0;
+    }
+
+    unsigned revision = 0;
+    std::string commit;
+    if(!getRevisionOrCommit(source_dir, revision, commit))
+        return 1;
+
+    bfs::ifstream versionh(binary_dir / versionFileName);
+    std::string openVersionH = versionFileName;
     const int versionh_errno = errno;
 
     if(!versionh)
     {
         versionh.clear();
-        versionh.open( (source_dir + versionFileName + ".cmake").c_str() );
+        versionh.open(source_dir / versionFileNameCMake);
+        openVersionH = versionFileNameCMake;
     }
 
     if(!versionh)
     {
-        cerr << "                failed to read any of:" << endl;
-        cerr << "                " + versionFileName + ":    " << strerror(versionh_errno) << endl;
-        cerr << "                " + versionFileName + ".in: " << strerror(errno) << endl;
+        std::cerr << "                failed to read any of:" << std::endl;
+        std::cerr << "                " + versionFileName + ":    " << strerror(versionh_errno) << std::endl;
+        std::cerr << "                " + versionFileNameCMake + ": " << strerror(errno) << std::endl;
 
         return 1;
     }
 
-    vector<string> newversionh;
+    std::vector<std::string> newversionh;
 
-    string line;
+    std::string line;
     bool changed = false;
-    while(getline(versionh, line))
+    while(std::getline(versionh, line))
     {
-        stringstream sLine(line);
-        string sDefine, defineName;
-        char tmpQuote;
-        string defineValue;
+        std::stringstream sLine(line);
+        std::string sDefine;
 
         sLine >> sDefine;
-        
+
         if(sDefine == "#define")
         {
-            sLine >> defineName >> tmpQuote >> defineValue >> tmpQuote; // define name "value"
+            std::string defineName, defineValue;
+            char tmpQuote;
 
-            stringstream vv(defineValue);
+            sLine >> defineName >> tmpQuote >> defineValue; // define name "value"
+            // Remove the trailing quote
+            if(!defineValue.empty() && defineValue[defineValue.size() - 1u] == '"')
+                defineValue.resize(defineValue.size() - 1u);
 
-            int defineValInt = 0;
-            vv >> defineValInt;
+            unsigned defineValInt = 0;
+            // TODO: Boost 1.56 has try_lexcial_convert
+            try
+            {
+                defineValInt = boost::lexical_cast<unsigned>(defineValue);
+            } catch(const boost::bad_lexical_cast&)
+            {
+            }
 
             if(defineName == "FORCE")
             {
-                cerr << "                the define \"FORCE\" does exist in the file \"" + versionFileName + "\"" << endl;
-                cerr << "                I will not change \"" + versionFileName + "\"" << endl;
+                std::cerr << "                the define \"FORCE\" does exist in the file \"" + openVersionH + "\"" << std::endl;
+                std::cerr << "                I will not change \"" + openVersionH + "\"" << std::endl;
                 return 0;
-            }else if(defineName == "WINDOW_VERSION")
+            } else if(defineName == "WINDOW_VERSION")
             {
                 time_t t;
                 time(&t);
 
                 char tv[64];
-                strftime(tv, 63, "%Y%m%d", localtime(&t) );
-                if(defineValInt >= 20000101 && defineValInt < atoi(tv))
+                strftime(tv, 63, "%Y%m%d", localtime(&t));
+                if(defineValInt >= 20000101u && defineValInt < boost::lexical_cast<unsigned>(tv))
                 {
                     // set new day
                     sLine.clear();
-                    sLine.str("");
                     sLine << sDefine << " " << defineName << " \"" << tv << "\"";
                     line = sLine.str();
 
-                    cout << "                renewing version to day \"" << tv << "\"" << endl;
+                    std::cout << "                renewing version to day \"" << tv << "\"" << std::endl;
                     changed = true;
                 }
-            }else if(defineName == "WINDOW_REVISION")
+            } else if(defineName == "WINDOW_REVISION")
             {
                 if(!commit.empty())
                 {
-                    if(defineValue != commit && defineValue != commit+"\"")
+                    if(defineValue != commit)
                     {
                         // set new revision
                         sLine.clear();
-                        sLine.str("");
                         sLine << sDefine << " " << defineName << " \"" << commit << "\"";
                         line = sLine.str();
 
-                        cout << "                renewing commit to \"" << commit << "\"" << endl;
+                        std::cout << "                renewing commit to \"" << commit << "\"" << std::endl;
                         changed = true;
                     }
-                }
-                else
+                } else
                 {
                     if(defineValInt < revision)
                     {
                         // set new revision
                         sLine.clear();
-                        sLine.str("");
                         sLine << sDefine << " " << defineName << " \"" << revision << "\"";
                         line = sLine.str();
 
-                        cout << "                renewing version to revision \"" << revision << "\"" << endl;
+                        std::cout << "                renewing version to revision \"" << revision << "\"" << std::endl;
                         changed = true;
                     }
                 }
@@ -330,23 +299,22 @@ int main(int argc, char* argv[])
 
     if(changed) // only write if changed
     {
-        std::cerr << "                " + versionFileName + " has changed" << std::endl;
+        std::cerr << "                " + openVersionH + " has changed" << std::endl;
 
-        ofstream versionh( (binary_dir + versionFileName).c_str() );
+        bfs::ofstream versionh(binary_dir / versionFileName);
         const int versionh_errno = errno;
 
         if(!versionh)
         {
-            cerr << "failed to write to " + versionFileName + ": " << strerror(versionh_errno) << endl;
+            std::cerr << "failed to write to " + versionFileName + ": " << strerror(versionh_errno) << std::endl;
             return 1;
         }
 
-        for(vector<string>::const_iterator itLine = newversionh.begin(); itLine != newversionh.end(); ++itLine)
-            versionh << *itLine << endl;
+        for(std::vector<std::string>::const_iterator itLine = newversionh.begin(); itLine != newversionh.end(); ++itLine)
+            versionh << *itLine << std::endl;
 
         versionh.close();
-    }
-    else
+    } else
         std::cerr << "                " + versionFileName + " is unchanged" << std::endl;
 
     return 0;

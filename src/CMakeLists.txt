@@ -19,7 +19,14 @@ ENDIF (CMAKE_CROSSCOMPILING)
 ################################################################################
 
 SET(version_SRCS versionMain.cpp)
+if(ClangFormat_FOUND)
+    add_ClangFormat_files(${version_SRCS})
+endif()
+
+FIND_PACKAGE(Boost 1.55.0 COMPONENTS filesystem system REQUIRED)
+INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIR})
 
 ADD_EXECUTABLE(version ${version_SRCS})
+TARGET_LINK_LIBRARIES(version ${Boost_LIBRARIES})
 
 ################################################################################
