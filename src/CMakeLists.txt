@@ -14,7 +14,7 @@ IF (CMAKE_CROSSCOMPILING)
 
 	SET(CMAKE_CXX_COMPILE_OBJECT  "${CMAKE_CXX_COMPILER} ${CMAKE_CXX_FLAGS} -o <OBJECT> -c <SOURCE>")
 	SET(CMAKE_CXX_LINK_EXECUTABLE "${CMAKE_CXX_COMPILER} ${CMAKE_CXX_LINK_FLAGS} <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
-ENDIF (CMAKE_CROSSCOMPILING)
+ENDIF ()
 
 ################################################################################
 
@@ -24,9 +24,9 @@ if(ClangFormat_FOUND)
 endif()
 
 FIND_PACKAGE(Boost 1.55.0 COMPONENTS filesystem system REQUIRED)
-INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIR})
+INCLUDE_DIRECTORIES(SYSTEM ${Boost_INCLUDE_DIR})
 
 ADD_EXECUTABLE(version ${version_SRCS})
-TARGET_LINK_LIBRARIES(version ${Boost_LIBRARIES})
+TARGET_LINK_LIBRARIES(version ${Boost_LIBRARIES} nowide-static)
 
 ################################################################################
