@@ -23,7 +23,7 @@ if(ClangFormat_FOUND)
     add_ClangFormat_files(${version_SRCS})
 endif()
 
-FIND_PACKAGE(Boost 1.55.0 COMPONENTS filesystem system REQUIRED)
+FIND_PACKAGE(Boost 1.55.0 REQUIRED COMPONENTS filesystem system)
 INCLUDE_DIRECTORIES(SYSTEM ${Boost_INCLUDE_DIR})
 
 ADD_EXECUTABLE(version ${version_SRCS})
