@@ -16,8 +16,18 @@ if(CMAKE_CROSSCOMPILING AND NOT RTTR_NO_SUBBUILDS)
 
 	MESSAGE(STATUS "${CMAKE_COMMAND} ${CMAKE_CURRENT_SOURCE_DIR} -DCMAKE_BUILD_TYPE=Release -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE=${HOST_BUILD_DIR} -DRTTR_NO_SUBBUILDS=ON ${extraArgs}")
 
-	unset(ENV{CC})
-	unset(ENV{CXX})
+	if(DEFINED ENV{CC})
+		set(_oldCC $ENV{CC})
+		unset(ENV{CC})
+	else()
+		undef(_oldCC)
+	endif()	
+	if(DEFINED ENV{CXX})
+		set(_oldCXX $ENV{CXX})
+		unset(ENV{CXX})
+	else()
+		undef(_oldCXX)
+	endif()
 
 	execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_CURRENT_SOURCE_DIR}
 					-DCMAKE_BUILD_TYPE=Release
@@ -29,11 +39,17 @@ if(CMAKE_CROSSCOMPILING AND NOT RTTR_NO_SUBBUILDS)
 					ERROR_VARIABLE VERSION_CFG_ERROR
 					OUTPUT_STRIP_TRAILING_WHITESPACE
 					ERROR_STRIP_TRAILING_WHITESPACE)
+	
+	if(DEFINED _oldCC)
+		set(ENV{CC] ${_oldCC})
+	endif()
+	if(DEFINED _oldCXX)
+		set(ENV{CXX] ${_oldCXX})
+	endif()
 	if(NOT VERSION_CFG_RESULT STREQUAL "0")
 		message(FATAL_ERROR "Configuring version tool failed with: ${VERSION_CFG_RESULT}\nError: ${VERSION_CFG_ERROR}")
 	endif()
 
-	MESSAGE(STATUS "Configuring native build of `version` tool completed." )
 else()
 	cmake_minimum_required(VERSION 2.8.12)
 	if(NOT CMAKE_VERSION VERSION_LESS 3.1)
