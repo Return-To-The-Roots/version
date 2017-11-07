@@ -45,8 +45,8 @@ else()
 			list(APPEND CMAKE_PREFIX_PATH ${Boost_INCLUDE_DIR}/stage ${Boost_INCLUDE_DIR})
 		endif()
 
+		set(RTTR_NO_LIBUTIL ON)
 		add_subdirectory(${RTTR_LIBUTIL_PATH} libutil)
-		set_target_properties(s25util PROPERTIES EXCLUDE_FROM_ALL ON EXCLUDE_FROM_DEFAULT_BUILD ON)
 	endif()
 endif()
 
