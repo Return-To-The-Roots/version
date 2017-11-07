@@ -2,6 +2,7 @@
 if(CMAKE_CROSSCOMPILING AND NOT RTTR_NO_SUBBUILDS)
 	set(HOST_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/hostBuild)
 	file(MAKE_DIRECTORY ${HOST_BUILD_DIR})
+
 	set(extraArgs )
 	if(RTTR_HOST_CMAKE_GENERATOR)
 		list(APPEND extraArgs "-G ${RTTR_HOST_CMAKE_GENERATOR}")
@@ -12,6 +13,12 @@ if(CMAKE_CROSSCOMPILING AND NOT RTTR_NO_SUBBUILDS)
 	if(RTTR_HOST_CMAKE_PLATFORM)
 		list(APPEND extraArgs "-A ${RTTR_HOST_CMAKE_PLATFORM}")
 	endif()
+
+	MESSAGE(STATUS "${CMAKE_COMMAND} ${CMAKE_CURRENT_SOURCE_DIR} -DCMAKE_BUILD_TYPE=Release -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE=${HOST_BUILD_DIR} -DRTTR_NO_SUBBUILDS=ON ${extraArgs}")
+
+	unset(ENV{CC})
+	unset(ENV{CXX})
+
 	execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_CURRENT_SOURCE_DIR}
 					-DCMAKE_BUILD_TYPE=Release
 					-DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE=${HOST_BUILD_DIR}
@@ -25,6 +32,8 @@ if(CMAKE_CROSSCOMPILING AND NOT RTTR_NO_SUBBUILDS)
 	if(NOT VERSION_CFG_RESULT STREQUAL "0")
 		message(FATAL_ERROR "Configuring version tool failed with: ${VERSION_CFG_RESULT}\nError: ${VERSION_CFG_ERROR}")
 	endif()
+
+	MESSAGE(STATUS "Configuring native build of `version` tool completed." )
 else()
 	cmake_minimum_required(VERSION 2.8.12)
 	if(NOT CMAKE_VERSION VERSION_LESS 3.1)
@@ -61,4 +70,4 @@ else()
 	endif()
 endif()
 
-add_subdirectory(src) 
+add_subdirectory(src)
