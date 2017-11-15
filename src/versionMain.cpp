@@ -240,7 +240,7 @@ int main(int argc, char* argv[])
             {
                 defineValInt = boost::lexical_cast<unsigned>(defineValue);
             } catch(const boost::bad_lexical_cast&)
-            {
+            { //-V565
             }
 
             if(defineName == "FORCE")
