@@ -169,7 +169,7 @@ int main(int argc, char* argv[])
         bfs::current_path(argv[1], ec);
         if(ec)
         {
-            bnw::cerr << "chdir to directory \"" << argv[1] << "\" failed!" << std::endl << "Msg: " << ec << std::endl;
+            bnw::cerr << "chdir to directory \"" << argv[1] << "\" failed!" << std::endl << "Msg: " << ec.message() << std::endl;
             return 1;
         }
     }
